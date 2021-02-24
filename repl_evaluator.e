@@ -1,9 +1,17 @@
 class
 	REPL_EVALUATOR
 
+feature -- Settings
+
+	set_last_expression (a_expr: like last_expression)
+			-- Sets `last_expression' to `a_expr'.
+		do
+			last_expression := a_expr
+		end
+
 feature -- Access
 
-	last_expression: detachable STRING
+	last_expression: detachable STRING assign set_last_expression
 	last_expression_attached: attached like last_expression
 		do
 			check attached last_expression as al_result then
@@ -131,7 +139,8 @@ feature -- Operations
 
 			last_variable := l_list [1]
 			last_type := l_list [2]
-			last_declared_variable := [null_variable, null_value, last_type_attached]
+			check no_u: not last_type_attached.has ('%U') end
+			last_declared_variable := [last_variable_attached, null_variable, null_value, last_type_attached]
 			variables.force (last_declared_variable_attached, last_variable_attached)
 		ensure
 			has_variable: attached variables.has (last_variable_attached)
@@ -153,11 +162,10 @@ feature -- Operations
 		require
 			attached last_expression
 		local
-			l_file: PLAIN_TEXT_FILE
 			l_class_code,
 			l_properties,
-			l_property: STRING
-			l_output: STRING
+			l_property,
+			l_type: STRING
 		do
 				-- expression into make print (expr)
 			l_class_code := eshell_APPLICATION_make_expression.twin
@@ -165,19 +173,24 @@ feature -- Operations
 
 				-- variables to properties
 			create l_properties.make_empty
+			check has_all_types: across variables as ic all attached ic.item.type as al_type and then not al_type.is_empty end end
 			across variables as ic loop
 				create l_property.make_empty
-				if ic.item.type = "ANY" then
-
-				elseif ic.item.type = "INTEGER" then
-					l_property.append_string_general (ic.key + ": " + ic.item.type + "%N")
+				check has_type: attached ic.item.type as al_type then l_type := al_type end
+				l_type.replace_substring_all ("%U", "")
+				if l_type.same_string (any_type_name) then
+					do_nothing -- for the moment ...
+				elseif l_type.same_string (integer_type_name) then
+					l_property.append_string_general (ic.item.identifier + ": " + l_type)
 					if attached ic.item.value as al_value then
-						l_property.append_string_general ("attribute Result := " + al_value.out + " end")
+						l_property.append_string_general (" attribute Result := " + al_value.out + " end")
 					else
-						l_property.append_string_general ("attribute Result := 0 end")
+						l_property.append_string_general (" attribute Result := 0 end")
 					end
+				else
+					check unknown_type: False end
 				end
-				l_properties.append_string_general (l_property + "%N")
+				l_properties.append_string_general (l_property)
 			end
 			l_class_code.replace_substring_all (properties_key, l_properties)
 
@@ -222,6 +235,10 @@ feature -- Operations
 			end
 		end
 
+	any_type_name: STRING = "ANY"
+
+	integer_type_name: STRING = "INTEGER"
+
 feature {NONE} -- Implementation: Access
 
 	null_variable: detachable STRING
@@ -251,7 +268,7 @@ feature {NONE} -- Implementation: Access
 			end
 		end
 
-	variable_anchor: detachable TUPLE [expression: detachable STRING; value: detachable ANY; type: STRING]
+	variable_anchor: detachable TUPLE [identifier: STRING expression: detachable STRING; value: detachable ANY; type: STRING]
 
 feature {NONE} -- Implementation: Constants
 

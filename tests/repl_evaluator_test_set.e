@@ -15,6 +15,79 @@ inherit
 
 feature -- Test routines
 
+	generated_class_code_test
+			--
+		note
+			testing:  "covers/{REPL_EVALUATOR}.generated_class_code",
+						"execution/isolated", "execution/serial"
+		local
+			l_repl: REPL_EVALUATOR
+		do
+			create l_repl
+			l_repl.set_last_expression ("1+1")
+			assert_strings_equal_diff ("1_plus_1", generated_class_string_1, l_repl.generated_class_code)
+		end
+
+feature {NONE} -- Test Support
+
+	generated_class_string_1: STRING = "[
+class APPLICATION
+
+create make
+
+feature
+
+	make
+		do
+			print (1+1)
+		end
+
+feature -- Properties
+
+
+
+end
+]"
+
+feature -- Test routines
+
+	generated_class_code_with_declaration_and_assignment_test
+			--
+		note
+			testing:  "covers/{REPL_EVALUATOR}.generated_class_code",
+						"execution/isolated", "execution/serial"
+		local
+			l_repl: REPL_EVALUATOR
+		do
+			create l_repl
+			l_repl.evaluate_and_process ("x:" + {REPL_EVALUATOR}.integer_type_name)
+			l_repl.set_last_expression ("x")
+			assert_strings_equal ("1_plus_1", generated_class_string_2, l_repl.generated_class_code)
+		end
+
+feature {NONE} -- Test Support
+
+	generated_class_string_2: STRING = "[
+class APPLICATION
+
+create make
+
+feature
+
+	make
+		do
+			print (x)
+		end
+
+feature -- Properties
+
+	x: INTEGER attribute Result := 0 end
+
+end
+]"
+
+feature -- Test routines
+
 	declaration_test
 			-- New test routine
 		note

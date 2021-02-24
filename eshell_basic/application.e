@@ -6,11 +6,11 @@ feature
 
 	make
 		do
-			print ()
+			print (x)
 		end
 
 feature -- Properties
 
-	
+	x: INTEGER attribute Result := 0 end
 
 end
