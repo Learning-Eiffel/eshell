@@ -6,12 +6,14 @@ feature
 
 	make
 		do
-			print (x + y)
+			print (first + space + last)
 		end
 
 feature -- Properties
 
-	x: INTEGER do Result := 5 end
-	y: INTEGER do Result := 10 end
+	a: ARRAY [STRING] do Result := <<"a","b">> end
+	first: STRING do Result := "Larry" end
+	last: STRING do Result := "Rix" end
+	space: STRING do Result := " " end
 
 end

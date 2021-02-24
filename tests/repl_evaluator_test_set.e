@@ -15,6 +15,14 @@ inherit
 
 feature -- Test routines
 
+	value_out_test
+		local
+			l_repl: REPL_EVALUATOR
+		do
+			create l_repl
+			assert_strings_equal ("array", "<<%"a%",%"b%">>", l_repl.value_out (<<"a","b">>))
+		end
+
 	is_assignment_test
 			--
 		local
@@ -36,9 +44,34 @@ feature -- Test routines
 			create l_repl
 			l_repl.set_last_expression ("1+1")
 			assert_strings_equal_diff ("1_plus_1", generated_class_string_1, l_repl.generated_class_code)
+
+			create l_repl
+			l_repl.evaluate_and_process ("a: ARRAY [STRING]")
+			l_repl.evaluate_and_process ("a := <<%"a%",%"b%">>")
+			l_repl.set_last_expression ("<<%"a%",%"b%">>")
+			assert_strings_equal ("array_a_b", generated_class_for_array, l_repl.generated_class_code)
 		end
 
 feature {NONE} -- Test Support
+
+	generated_class_for_array: STRING = "[
+class APPLICATION
+
+create make
+
+feature
+
+	make
+		do
+			print (<<"a","b">>)
+		end
+
+feature -- Properties
+
+	a: ARRAY [STRING] do Result := <<"a","b">> end
+
+end
+]"
 
 	generated_class_string_1: STRING = "[
 class APPLICATION

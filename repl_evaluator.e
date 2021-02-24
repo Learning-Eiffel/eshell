@@ -47,8 +47,8 @@ feature -- Basic Operations
 			last_line := a_line.twin
 			last_line.adjust
 
-			if is_comment (last_line) then
-				print ("comment: " + last_line + "%N")
+			if is_comment then
+				do_nothing
 			elseif is_declaration then
 				process_declaration
 			elseif is_assignment then
@@ -65,10 +65,10 @@ feature -- Basic Operations
 
 feature -- Queries
 
-	is_comment (s: STRING): BOOLEAN
+	is_comment: BOOLEAN
 			-- Is `s' a comment?
 		do
-			Result := s.substring (1, 2).same_string ("--")
+			Result := last_line.substring (1, 2).same_string ("--")
 		end
 
 	is_declaration: BOOLEAN
@@ -134,6 +134,8 @@ feature -- Operations
 					al_variable_tuple.value := last_eshell_basic_output_attached.to_integer
 				elseif al_variable_tuple.type.same_string (real_type_name) then
 					al_variable_tuple.value := last_eshell_basic_output_attached.to_real
+				elseif al_variable_tuple.type.has_substring (array_type_name) then
+					al_variable_tuple.value := last_expression_attached
 				else
 					al_variable_tuple.value := last_eshell_basic_output_attached
 				end
@@ -194,7 +196,8 @@ feature -- Operations
 			l_class_code,
 			l_properties,
 			l_property,
-			l_type: STRING
+			l_type,
+			l_temp: STRING
 		do
 				-- expression into make print (expr)
 			l_class_code := eshell_APPLICATION_make_expression.twin
@@ -209,15 +212,48 @@ feature -- Operations
 				l_type.replace_substring_all ("%U", "")
 				if l_type.same_string (any_type_name) then
 					do_nothing -- for the moment ...
-				elseif l_type.same_string (integer_type_name) then
+				elseif l_type.has_substring (integer_type_name) then
 					l_property.append_string_general (ic.item.identifier + ": " + l_type)
 					if attached ic.item.value as al_value then
-						l_property.append_string_general (" do Result := " + al_value.out + " end")
+						l_property.append_string_general (" do Result := " + value_out (al_value) + " end")
 					else
 						l_property.append_string_general (" do Result := 0 end")
 					end
+				elseif l_type.has_substring (array_type_name) then
+					l_property.append_string_general (ic.item.identifier + ": " + l_type)
+					if attached ic.item.value as al_value then
+						l_property.append_string_general (" do Result := ")
+						l_temp := value_out (al_value)
+						l_temp.remove_head (1)
+						l_temp.remove_tail (1)
+						l_property.append_string_general (l_temp)
+						l_property.append_string_general (" end")
+					else
+						l_property.append_string_general (" do Result := <<>> end")
+					end
+				elseif l_type.has_substring (string_type_name) then
+					l_property.append_string_general (ic.item.identifier + ": " + l_type)
+					if attached ic.item.value as al_value then
+						l_property.append_string_general (" do Result := " + value_out (al_value) + " end")
+					else
+						l_property.append_string_general (" do Result := %"%" end")
+					end
+				elseif l_type.has_substring (boolean_type_name) then
+					l_property.append_string_general (ic.item.identifier + ": " + l_type)
+					if attached ic.item.value as al_value then
+						l_property.append_string_general (" do Result := " + value_out (al_value) + " end")
+					else
+						l_property.append_string_general (" do Result := False end")
+					end
+				elseif l_type.has_substring (tuple_type_name) then
+					l_property.append_string_general (ic.item.identifier + ": " + l_type)
+					if attached ic.item.value as al_value then
+						l_property.append_string_general (" do Result := " + value_out (al_value) + " end")
+					else
+						l_property.append_string_general (" do Result := [] end")
+					end
 				else
-					check unknown_type: False end
+					print ("unknown type%N")
 				end
 				if not l_properties.is_empty then
 					l_properties.append_character ('%N')
@@ -232,6 +268,39 @@ feature -- Operations
 		ensure
 			no_expression_key: not Result.has_substring (expression_key)
 			no_properties_key: not Result.has_substring (properties_key)
+		end
+
+	value_out (a_value: ANY): STRING
+			--
+		do
+			create Result.make_empty
+			if attached {STRING} a_value as al_value then
+				Result := "%"" + al_value + "%""
+			elseif attached {ARRAY [ANY]} a_value as al_value then
+				Result := "<<"
+				across
+					al_value as ic
+				loop
+					Result.append_string_general (value_out (ic.item))
+					Result.append_character (',')
+				end
+				if Result [Result.count] = ',' then
+					Result.remove_tail (1)
+				end
+				Result.append_string_general (">>")
+			elseif attached {TUPLE} a_value as al_value then
+				Result := "["
+				across
+					al_value as ic
+				loop
+					if attached ic.item as al_item then
+						Result.append_string_general (value_out (al_item))
+					end
+				end
+				Result.append_string_general ("]")
+			else
+				Result := a_value.out
+			end
 		end
 
 	application_make (a_code: STRING)
@@ -274,6 +343,14 @@ feature -- Operations
 
 	real_type_name: STRING = "REAL"
 
+	array_type_name: STRING = "ARRAY"
+
+	tuple_type_name: STRING = "TUPLE"
+
+	boolean_type_name: STRING = "BOOLEAN"
+
+	string_type_name: STRING = "STRING"
+
 feature {NONE} -- Implementation: Access
 
 	null_variable: detachable STRING
@@ -313,7 +390,7 @@ feature {NONE} -- Implementation: Constants
 			create Result
 		end
 
-	compile_eshell: STRING = "C:\PROGRA~1\EIFFEL~1\EIFFEL~1.05S\studio\spec\win64\bin\ec.exe -config ./eshell_basic/eshell_basic.ecf -project_path ./eshell_basic -freeze -c_compile"
+	compile_eshell: STRING = "C:\PROGRA~1\EIFFEL~1\EIFFEL~1.05S\studio\spec\win64\bin\ec.exe -config ./eshell_basic/eshell_basic.ecf -project_path ./eshell_basic -freeze -c_compile -batch"
 
 	call_eshell_basic_exe: STRING = "./eshell_basic/EIFGENs/eshell_basic/W_code/eshell_basic.exe"
 
