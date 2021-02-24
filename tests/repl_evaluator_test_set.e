@@ -91,7 +91,7 @@ feature
 
 feature -- Properties
 
-	x: INTEGER attribute Result := 0 end
+	x: INTEGER do Result := 0 end
 
 end
 ]"

@@ -74,7 +74,9 @@ feature -- Queries
 	is_declaration: BOOLEAN
 			-- Is `s' a declaration? (e.g. x: INTEGER)
 		do
-			Result := last_line.has (':') and then (last_line.split (':')).count = 2
+			Result := (not is_assignment) and then
+						last_line.has (':') and then
+						(last_line.split (':')).count = 2
 		end
 
 	is_assignment: BOOLEAN
@@ -119,14 +121,22 @@ feature -- Operations
 
 			check precisely_two: l_list.count = 2 end
 
+			l_list [1].adjust
 			last_variable := l_list [1]
+			l_list [2].adjust
 			last_expression := l_list [2]
 
 			if attached variables [last_variable_attached] as al_variable_tuple then
 				last_declared_variable := al_variable_tuple
 				last_line := last_expression_attached
 				process_expression
-				al_variable_tuple.value := last_eshell_basic_output_attached
+				if al_variable_tuple.type.same_string (integer_type_name) then
+					al_variable_tuple.value := last_eshell_basic_output_attached.to_integer
+				elseif al_variable_tuple.type.same_string (real_type_name) then
+					al_variable_tuple.value := last_eshell_basic_output_attached.to_real
+				else
+					al_variable_tuple.value := last_eshell_basic_output_attached
+				end
 			else
 				print ("Variable `" + last_variable_attached + "' is undeclared." )
 			end
@@ -152,9 +162,13 @@ feature -- Operations
 
 			check precisely_two: l_list.count = 2 end
 
+			l_list [1].adjust
 			last_variable := l_list [1]
+			l_list [2].adjust
 			last_type := l_list [2]
+
 			check no_u: not last_type_attached.has ('%U') end
+
 			last_declared_variable := [last_variable_attached, null_variable, null_value, last_type_attached]
 			variables.force (last_declared_variable_attached, last_variable_attached)
 		ensure
@@ -198,12 +212,16 @@ feature -- Operations
 				elseif l_type.same_string (integer_type_name) then
 					l_property.append_string_general (ic.item.identifier + ": " + l_type)
 					if attached ic.item.value as al_value then
-						l_property.append_string_general (" attribute Result := " + al_value.out + " end")
+						l_property.append_string_general (" do Result := " + al_value.out + " end")
 					else
-						l_property.append_string_general (" attribute Result := 0 end")
+						l_property.append_string_general (" do Result := 0 end")
 					end
 				else
 					check unknown_type: False end
+				end
+				if not l_properties.is_empty then
+					l_properties.append_character ('%N')
+					l_properties.append_character ('%T')
 				end
 				l_properties.append_string_general (l_property)
 			end
@@ -253,6 +271,8 @@ feature -- Operations
 	any_type_name: STRING = "ANY"
 
 	integer_type_name: STRING = "INTEGER"
+
+	real_type_name: STRING = "REAL"
 
 feature {NONE} -- Implementation: Access
 
