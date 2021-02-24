@@ -6,7 +6,7 @@ feature
 
 	make
 		do
-			print ("abc")
+			print ()
 		end
 
 feature -- Properties

@@ -22,7 +22,7 @@ feature -- Access
 feature -- Basic Operations
 
 	evaluate_and_process (a_line: STRING)
-			--
+			-- `evaluate_and_process' `a_line' of input from user.
 		require
 			not_exit: not a_line.same_string ({REPL_ENGINE}.exit_command)
 		do
@@ -39,6 +39,8 @@ feature -- Basic Operations
 				process_assignment
 			elseif is_do_end (last_line) then
 				print ("do ... end")
+			elseif last_line.is_empty then
+				do_nothing
 			else
 				process_expression
 			end
