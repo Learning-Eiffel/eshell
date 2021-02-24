@@ -15,6 +15,16 @@ inherit
 
 feature -- Test routines
 
+	is_assignment_test
+			--
+		local
+			l_repl: REPL_EVALUATOR
+		do
+			create l_repl
+			l_repl.set_last_line ("y:=1")
+			assert ("is_assignment", l_repl.is_assignment)
+		end
+
 	generated_class_code_test
 			--
 		note
@@ -44,7 +54,7 @@ feature
 
 feature -- Properties
 
-
+	
 
 end
 ]"

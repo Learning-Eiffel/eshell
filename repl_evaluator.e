@@ -9,6 +9,14 @@ feature -- Settings
 			last_expression := a_expr
 		end
 
+	set_last_line (a_line: like last_line)
+			--
+		do
+			last_line := a_line
+		ensure
+			set: last_line.same_string (a_line)
+		end
+
 feature -- Access
 
 	last_expression: detachable STRING assign set_last_expression
@@ -71,9 +79,14 @@ feature -- Queries
 
 	is_assignment: BOOLEAN
 			-- Is `s' and assignment instruction?
+		local
+			l_line: STRING
 		do
-			last_line.replace_substring_all (":=", ",")
-			Result := last_line.has_substring (":=") and then (last_line.split (',')).count = 2
+			l_line := last_line.twin
+			l_line.replace_substring_all (":=", "%N")
+			Result := last_line.has_substring (":=") and then (l_line.split ('%N')).count = 2
+		ensure
+			last_line.same_string (old last_line)
 		end
 
 	is_do_end (s: STRING): BOOLEAN
@@ -109,11 +122,13 @@ feature -- Operations
 			last_variable := l_list [1]
 			last_expression := l_list [2]
 
-			check variable_declared: attached variables [last_variable_attached] as al_variable_tuple then
+			if attached variables [last_variable_attached] as al_variable_tuple then
 				last_declared_variable := al_variable_tuple
 				last_line := last_expression_attached
 				process_expression
 				al_variable_tuple.value := last_eshell_basic_output_attached
+			else
+				print ("Variable `" + last_variable_attached + "' is undeclared." )
 			end
 		end
 
